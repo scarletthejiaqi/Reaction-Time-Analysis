@@ -1,0 +1,93 @@
+---
+title: "Final Project"
+author: "Jiaqi He"
+date: "2024-05-07"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(corrplot)
+library(MASS)
+library(DescTools)
+library(car)
+```
+
+## Data Cleaning
+
+```{r}
+df = read.csv("Survey.csv")
+drop = c("Class","Age","Fatigue.level","Alcohol.intake","Primary.hand","Use.primary.hand","Cautious.level","WiFi.stable","Visual.acuity")
+data = df[,!(names(df) %in% drop)]
+numerize = c("Never" = 0,  "Rarely" = 1, "Several times a month" = 1, "Once a week" = 2, "Several times a week" = 3, "Daily" = 4)
+data$Game.freq = numerize[data$Game.freq]
+data$Sport.freq = numerize[data$Sport.freq]
+data$practice = data$Game.freq + data$Sport.freq
+data = rename(data, c('y' = "Reaction.time"))
+data$practice = factor(data$practice)
+data$Game.freq = factor(data$Game.freq)
+data$Sport.freq = factor(data$Sport.freq)
+ggplot(data = data, aes(x = practice, y = y)) +
+  geom_boxplot() +
+  labs(x = "Practice", y = "Reaction time", title = "Boxplot of Reaction time by Practice")
+table(data$practice)
+
+```
+
+```{r}
+#address non_normality of residual
+model = lm(y ~ practice - 1, data = data)
+boxcox(model, plotit=T)
+lambda_opt = -0.5  # Replace this with the λ from your boxcox_result
+y_transformed = (data$y^lambda_opt - 1) / lambda_opt
+model_transformed = lm(y_transformed ~ practice - 1, data = data)
+plot(model_transformed)
+summary(model_transformed)
+shapiro.test(residuals(model_transformed))
+plot(model_transformed)
+```
+
+```{r}
+aov = aov(y_transformed ~ practice, data = data)
+ScheffeTest(aov, contrasts = c(1, 1, 1, 1,-1,-1,-1,-1,0))
+```
+no difference between practice and no practice
+
+
+```{r}
+data$sleep.deprive = pmin(0,data$last.night.sleep.time - data$Avg.sleep.time)
+data$group <- with(data, ifelse(Caffein.intake == "Yes" & sleep.deprive < 0, "deprive with caffeine",
+                               ifelse(Caffein.intake == "No" & sleep.deprive < 0, "deprive without caffeine",
+                                             "Good")))
+ggplot(data = data, aes(x = sleep.deprive, y = y)) +
+  geom_point() +
+  labs(x = "group", y = "Y", title = "Boxplot of Y by group")
+table(data$group)
+```
+```{r}
+sleep = lm(y ~ group, data = data)
+plot(sleep)
+boxcox(model, plotit=T)
+lambda_opt = -0.5
+sleep_transformed = lm(y_transformed ~ group - 1, data = data)
+summary(sleep_transformed)
+ggplot(data = data, aes(x = group, y = y)) +
+  geom_boxplot() +
+  labs(x = "group", y = "Reaction time", title = "Boxplot of Reaction time by group")
+```
+```{r}
+anova_result <- aov(y_transformed ~ group, data = data)
+TukeyHSD(anova_result)
+```
+no diff
+
+
+```{r}
+try = lm(y ~ group, data = data)
+summary(try)
+```
