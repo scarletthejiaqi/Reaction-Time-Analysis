@@ -1,5 +1,10 @@
 # Reaction Time Prediction Project
 
+## Author
+
+- **Name:** Jiaqi(Scarlett) He
+- **Email:** [Scarlett_hjq@outlook.com](mailto:Scarlett_hjq@outlook.com)
+
 ## Abstract
 
 In this study, we aimed to determine how various conditions affect reaction times and to develop a predictive model that accurately forecasts these times.  
